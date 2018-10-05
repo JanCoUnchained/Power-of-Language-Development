@@ -5,6 +5,15 @@ date: "August 10, 2017"
 output: html_document
 ---
 
+```{r setup}
+knitr::opts_chunk$set(include = FALSE)
+
+library(pacman)
+p_load(lmerTest, tidyverse, simr)
+
+test <- read_csv("test_clean.csv")
+train <- read_csv("language_dev_asd_clean_2.csv")
+```
 
 ## Welcome to the fourth exciting part of the Language Development in ASD exercise
 
@@ -14,12 +23,35 @@ In this exercise we will assess how many participants we would need to adequatel
 
 How much power does your study have (if your model estimates are quite right)?
 - [GitHub]Load your dataset, fit your favorite model, assess power for your main effects and interactions of interest.
+```{r}
+set.seed(1337)
+big_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + Diagnosis+ verbalIQ_1 + MOT_MLU + tokens_MOT + 
+                    (1+VISIT + I(VISIT^2)|SUBJ), data = train, REML = FALSE)
+
+powerV = powerSim(big_model, simr::fixed("Diagnosis", method = "t"), nsim=30, alpha = .05)
+powerV
+
+#alpha = 0.000000001 --- if you want to not get 100% for visit.
+```
+
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
 
 ### Exercise 2
 
 How would you perform a more conservative power analysis?
 - Identify and justify a minimum effect size for each of your relevant effects
+```{r}
+train$Diagnosis <- ifelse(train$Diagnosis == "ASD", "0", "1") 
+train$Diagnosis <- as.factor(train$Diagnosis)
+
+fixef(big_model)["VISIT"]  <-  0.3
+fixef(big_model)["Diagnosis"]  <-  1
+
+powerCurveV  =  powerCurve(big_model,  simr::fixed("VISIT", method = "t"), along="SUBJ",  nsim=10)
+powerCurveV
+```
+
 - [GitHub] take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.
 - [GitHub] assess the power curve by Child.ID, identifying an ideal number of participants to estimate each effect
 - [GitHub] if your power estimates do not reach an acceptable threshold simulate additional participants and repeat the previous analysis
