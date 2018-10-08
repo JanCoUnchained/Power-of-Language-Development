@@ -34,16 +34,20 @@ set.seed(1337)
 TypesModel <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + verbalIQ_1 + MOT_MLU + tokens_MOT + 
                     (1+VISIT + I(VISIT^2)|SUBJ), data = train, REML = FALSE)
 
-powerV_1 = powerSim(TypesModel, fixed("VISIT"), nsim=20)
-
-powerV_2 = powerSim(TypesModel, fixed("I(VISIT^2)"), nsim=20)
-
-powerV_3 = powerSim(TypesModel, fixed("verbalIQ_1"), nsim=20)
-
 ```
 
 ```{r}
+powerV_1 = powerSim(TypesModel, test = simr::fixed("VISIT", method = "t"), nsim=200)
 
+powerV_2 = powerSim(TypesModel, test = simr::fixed("I(VISIT^2)", method = "t"), nsim=200)
+
+powerV_3 = powerSim(TypesModel, test = simr::fixed("verbalIQ_1", method = "t"), nsim=200)
+
+powerV_4 = powerSim(TypesModel, test = simr::fixed("MOT_MLU", method = "t"), nsim=200)
+
+powerV_5 = powerSim(TypesModel, test = simr::fixed("tokens_MOT", method = "t"), nsim=200)
+
+powerV_6 = powerSim(TypesModel, test = simr::random("(I(VISIT^2)|SUBJ)", method = "t"), nsim=200)
 ```
 
 
@@ -57,7 +61,7 @@ How would you perform a more conservative power analysis?
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
 ```{r Harder Better Faster Stronger}
-powerCurve_visit = powerCurve(TypesModel, fixed("VISIT"), along = "SUBJ", nsim = 200)
+
 ```
 
 

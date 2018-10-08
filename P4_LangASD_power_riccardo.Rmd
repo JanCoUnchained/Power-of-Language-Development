@@ -11,7 +11,7 @@ knitr::opts_chunk$set(include = FALSE)
 library(pacman)
 p_load(lmerTest, tidyverse, simr)
 
-#big_model <- readRDS("big_model.rds")
+big_model <- readRDS("big_model.rds")
 test <- read_csv("test_clean.csv")
 train <- read_csv("language_dev_asd_clean_2.csv")
 ```
@@ -27,23 +27,24 @@ How much power does your study have (if your model estimates are quite right)?
 - [GitHub]Load your dataset, fit your favorite model, assess power for your main effects and interactions of interest.
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
-
-```{r No one model should have all that power}
-set.seed(1337)
-
-TypesModel <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + verbalIQ_1 + MOT_MLU + tokens_MOT + 
-                    (1+VISIT + I(VISIT^2)|SUBJ), data = train, REML = FALSE)
-
-powerV_1 = powerSim(TypesModel, fixed("VISIT"), nsim=20)
-
-powerV_2 = powerSim(TypesModel, fixed("I(VISIT^2)"), nsim=20)
-
-powerV_3 = powerSim(TypesModel, fixed("verbalIQ_1"), nsim=20)
-
-```
+with other model 
 
 ```{r}
+#new model - basic - but we can expand..
+#as factor diagnosis
+train$Diagnosis <- as.factor(train$Diagnosis)
+train$SUBJ <- as.factor(train$SUBJ)
 
+HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + I(VISIT^2) +
+                    (1+VISIT|SUBJ) , data = train, REML = FALSE)
+HypesModel
+
+#doing only 20 just for ease 
+powerHype <- powerSim(HypesModel, simr::fixed("DiagnosisTD", method = "t"), nsim = 20)
+powerHype #40% - effect size = -0.21
+
+powerVisit <- powerSim(HypesModel, simr::fixed("VISIT", method = "t"), nsim = 20)
+powerVisit #100% - effect size = 0.41
 ```
 
 
@@ -56,8 +57,30 @@ How would you perform a more conservative power analysis?
 - [GitHub] if your power estimates do not reach an acceptable threshold simulate additional participants and repeat the previous analysis
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
-```{r Harder Better Faster Stronger}
-powerCurve_visit = powerCurve(TypesModel, fixed("VISIT"), along = "SUBJ", nsim = 200)
+```{r}
+HypesModel
+fixef(HypesModel)["VISIT"] <- 0.1 #what is the smallest beta coefficient that would be interesting
+fixef(HypesModel)["DiagnosisTD"] <- -0.1 #what is the smallest beta coefficient that would be int.
+
+HypesModel
+
+#this does not work - however, it works for the complex model, so mayby I did something strange. 
+library(simr)
+powerCurveV = powerCurve(HypesModel,
+fixed("VISIT"),along="SUBJ",nsim = 10)
+
+powerCurveV 
+plot(powerCurveV)
+
+powerCurveV = powerCurve(HypesModel,
+fixed("DiagnosisTD"),along="SUBJ", nsim = 10)
+
+powerCurveV 
+plot(powerCurveV)
+
+#simulating more participants 
+#I think we should use makeLmer()
+
 ```
 
 
