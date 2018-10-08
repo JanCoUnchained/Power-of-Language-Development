@@ -35,16 +35,28 @@ with other model
 train$Diagnosis <- as.factor(train$Diagnosis)
 train$SUBJ <- as.factor(train$SUBJ)
 
-HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + I(VISIT^2) +
-                    (1+VISIT|SUBJ) , data = train, REML = FALSE)
-HypesModel
+ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
+  geom_point()+
+  geom_smooth()
 
-#doing only 20 just for ease 
-powerHype <- powerSim(HypesModel, simr::fixed("DiagnosisTD", method = "t"), nsim = 20)
-powerHype #40% - effect size = -0.21
+#first model
+HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+                    (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
-powerVisit <- powerSim(HypesModel, simr::fixed("VISIT", method = "t"), nsim = 20)
-powerVisit #100% - effect size = 0.41
+#interaction effect?
+inter_diag_visit <- powerSim(HypesModel, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 20)
+inter_diag_visit #40% - effect size = -0.21
+
+#second model 
+PypesModel <- lmer(CHI_MLU ~ Diagnosis + VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+                   data = train, REML = FALSE)
+
+fix_diag <- powerSim(PypesModel, simr::fixed("Diagnosis", method = "t"), nsim = 20)
+fix_diag
+
+fix_visit <- powerSim(PypesModel, simr::fixed("VISIT", method = "t"), nsim = 20)
+fix_visit 
+
 ```
 
 
@@ -58,25 +70,34 @@ How would you perform a more conservative power analysis?
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
 ```{r}
-HypesModel
-fixef(HypesModel)["VISIT"] <- 0.1 #what is the smallest beta coefficient that would be interesting
-fixef(HypesModel)["DiagnosisTD"] <- -0.1 #what is the smallest beta coefficient that would be int.
 
+#for interaction model
 HypesModel
+fixef(HypesModel)["DiagnosisTD:VISIT"] <- 0.4 #least effect of interest. 
 
-#this does not work - however, it works for the complex model, so mayby I did something strange. 
 library(simr)
 powerCurveV = powerCurve(HypesModel,
-fixed("VISIT"),along="SUBJ",nsim = 10)
+simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 10)
 
 powerCurveV 
 plot(powerCurveV)
 
-powerCurveV = powerCurve(HypesModel,
-fixed("DiagnosisTD"),along="SUBJ", nsim = 10)
+#for fixed model 
 
-powerCurveV 
-plot(powerCurveV)
+PypesModel
+fixef(PypesModel)["DiagnosisTD"] <- 0.2
+fixef(PypesModel)["VISIT"] <- 0.1
+PypesModel
+
+powerCurve1 = powerCurve(PypesModel, simr::fixed("DiagnosisTD", method = "t"),along="SUBJ", nsim = 10)
+
+powerCurve1 
+plot(powerCurve1)
+
+powerCurve2 = powerCurve(PypesModel, simr::fixed("VISIT", method = "t"), along = "SUBJ", nsim = 10)
+
+powerCurve2
+plot(powerCurve2)
 
 #simulating more participants 
 #I think we should use makeLmer()
