@@ -44,28 +44,29 @@ HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
                     (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
 HypesModel
-#interaction effect?
+
+#interaction effect + power 
 set.seed(911)
 inter_diag_visit <- powerSim(HypesModel, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 100)
-inter_diag_visit #40% - effect size = -0.21
+inter_diag_visit #100% CI (96.38-100) - beta = 0.48
 
 #checking the diff kids 
-bad_kid <- train %>%
+ASD_kid <- train %>%
   filter(Diagnosis == "ASD")
 
-good_kid <- train %>%
+TD_kid <- train %>%
   filter(Diagnosis == "TD")
 
 #cheking whether the 
-bad_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+ASD_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
                    data = bad_kid, REML = FALSE)
 
-bad_model #slope .29
+ASD_model #slope .29
 
-good_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+TD_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
                    data = train, REML = FALSE)
 
-good_model #slope .55
+TD_model #slope .55
 
 ```
 
@@ -94,7 +95,7 @@ plot(powerCurveV)
 
 ```
 
-attempting to simulate
+simulation of new data
 
 ```{r}
 
@@ -105,7 +106,6 @@ HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
                     (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
 train2 <- train
-train3 <- 
 train2$CHI_MLU <- NA
 train2$SUBJ <- as.numeric(train2$SUBJ)
 train2$SUBJ <- train2$SUBJ + 66
@@ -131,12 +131,7 @@ ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
   geom_point()+
   geom_smooth()
 
-#just moving on to see what happens 
-trainbackup <- train
-trainbackup2 <- train2
-
-train$SUBJ <- factor(train$SUBJ)
-
+#rbind 
 train3 <- rbind(train, train2)
 levels(train3$SUBJ) #has one level - issue?
 
@@ -152,16 +147,17 @@ library(simr)
 
 set.seed(911)
 powerCurveNew = powerCurve(data_model,
-simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 100) 
+simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ", nsim = 100) 
 
 powerCurveNew #88 percent. 
-plot(powerCurveNew)
+plot(powerCurveNew) #somewhere between 109 - 122 participants we cross the 80% mark
 
 ```
 
 second attempt
 
 ```{r}
+
 
 
 ```
