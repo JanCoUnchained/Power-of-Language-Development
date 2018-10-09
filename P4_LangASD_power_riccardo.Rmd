@@ -106,6 +106,8 @@ HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
 
 train2 <- train
 train2$CHI_MLU <- NA
+train2$SUBJ <- train2$SUBJ + 66
+train2$SUBJ <- factor(train2$SUBJ)
 
 p_load(stats)
 train2$CHI_MLU <- simulate(HypesModel, seed=1, newdata=train2, re.form=NA,
@@ -131,19 +133,16 @@ ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
 trainbackup <- train
 trainbackup2 <- train2
 
-train$SUBJ <- as.numeric(train$SUBJ)
-train2$SUBJ <- as.numeric(train2$SUBJ)
-train2$SUBJ <- train2$SUBJ + 66
+train$SUBJ <- factor(train$SUBJ)
 
 train3 <- rbind(train, train2)
-train3$SUBJ <- factor(train3$SUBJ) #doesn't matter whether we convert..
 levels(train3$SUBJ) #has one level - issue?
 
 sd(train3$CHI_MLU) #pretty close to original 
 
 #reused code 
 data_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
-                    (1+VISIT +(VISIT^2)|SUBJ) , data = train3, REML = FALSE)
+                    (1+VISIT +(VISIT^2)|SUBJ), data = train3, REML = FALSE)
 
 data_model
 fixef(data_model)["DiagnosisTD:VISIT"] <- 0.25 #least effect of interest. 
