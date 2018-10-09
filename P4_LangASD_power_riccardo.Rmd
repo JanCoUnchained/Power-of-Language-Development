@@ -105,7 +105,9 @@ HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
                     (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
 train2 <- train
+train3 <- 
 train2$CHI_MLU <- NA
+train2$SUBJ <- as.numeric(train2$SUBJ)
 train2$SUBJ <- train2$SUBJ + 66
 train2$SUBJ <- factor(train2$SUBJ)
 
