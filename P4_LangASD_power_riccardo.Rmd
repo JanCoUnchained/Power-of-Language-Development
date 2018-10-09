@@ -35,18 +35,39 @@ with other model
 train$Diagnosis <- as.factor(train$Diagnosis)
 train$SUBJ <- as.factor(train$SUBJ)
 
-HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + I(VISIT^2) +
-                    (1+VISIT|SUBJ) , data = train, REML = FALSE)
+ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
+  geom_point()+
+  geom_smooth()
+
+#first model
+HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+                    (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
+
 HypesModel
+#interaction effect?
+set.seed(911)
+inter_diag_visit <- powerSim(HypesModel, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 100)
+inter_diag_visit #40% - effect size = -0.21
 
-#doing only 20 just for ease 
-powerHype <- powerSim(HypesModel, simr::fixed("DiagnosisTD", method = "t"), nsim = 20)
-powerHype #40% - effect size = -0.21
+#checking the diff kids 
+bad_kid <- train %>%
+  filter(Diagnosis == "ASD")
 
-powerVisit <- powerSim(HypesModel, simr::fixed("VISIT", method = "t"), nsim = 20)
-powerVisit #100% - effect size = 0.41
+good_kid <- train %>%
+  filter(Diagnosis == "TD")
+
+#cheking whether the 
+bad_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+                   data = bad_kid, REML = FALSE)
+
+bad_model #slope .29
+
+good_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+                   data = train, REML = FALSE)
+
+good_model #slope .55
+
 ```
-
 
 ### Exercise 2
 
@@ -58,32 +79,97 @@ How would you perform a more conservative power analysis?
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
 ```{r}
-HypesModel
-fixef(HypesModel)["VISIT"] <- 0.1 #what is the smallest beta coefficient that would be interesting
-fixef(HypesModel)["DiagnosisTD"] <- -0.1 #what is the smallest beta coefficient that would be int.
 
+#for interaction model
 HypesModel
-
-#this does not work - however, it works for the complex model, so mayby I did something strange. 
+fixef(HypesModel)["DiagnosisTD:VISIT"] <- 0.25 #least effect of interest. 
 library(simr)
+
+set.seed(911)
 powerCurveV = powerCurve(HypesModel,
-fixed("VISIT"),along="SUBJ",nsim = 10)
+simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 100)
 
 powerCurveV 
 plot(powerCurveV)
-
-powerCurveV = powerCurve(HypesModel,
-fixed("DiagnosisTD"),along="SUBJ", nsim = 10)
-
-powerCurveV 
-plot(powerCurveV)
-
-#simulating more participants 
-#I think we should use makeLmer()
 
 ```
 
+attempting to simulate
+
+```{r}
+
+#FIRST APPROACH
+#https://gist.github.com/tmalsburg/df66e6c2ab494fad83ee
+
+HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+                    (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
+
+train2 <- train
+train2$CHI_MLU <- NA
+
+p_load(stats)
+train2$CHI_MLU <- simulate(HypesModel, seed=1, newdata=train2, re.form=NA,
+                        allow.new.levels=T)$sim_1
+
+t.test(train$CHI_MLU, train2$CHI_MLU) #close enough? 
+
+summary(train$CHI_MLU)
+summary(train2$CHI_MLU) #negative values, not good..
+
+sd(train$CHI_MLU)
+sd(train2$CHI_MLU) #actually the sd is lower..? 
+
+ggplot(train2, aes(VISIT, CHI_MLU, color = Diagnosis))+
+  geom_point()+
+  geom_smooth()
+
+ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
+  geom_point()+
+  geom_smooth()
+
+#just moving on to see what happens 
+trainbackup <- train
+trainbackup2 <- train2
+
+train$SUBJ <- as.numeric(train$SUBJ)
+train2$SUBJ <- as.numeric(train2$SUBJ)
+train2$SUBJ <- train2$SUBJ + 66
+
+train3 <- rbind(train, train2)
+train3$SUBJ <- factor(train3$SUBJ) #doesn't matter whether we convert..
+levels(train3$SUBJ) #has one level - issue?
+
+sd(train3$CHI_MLU) #pretty close to original 
+
+#reused code 
+data_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+                    (1+VISIT +(VISIT^2)|SUBJ) , data = train3, REML = FALSE)
+
+data_model
+fixef(data_model)["DiagnosisTD:VISIT"] <- 0.25 #least effect of interest. 
+library(simr)
+
+set.seed(911)
+powerCurveNew = powerCurve(data_model,
+simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 100) 
+
+powerCurveNew #88 percent. 
+plot(powerCurveNew)
+
+```
+
+second attempt
+
+```{r}
+
+
+```
 
 ### Exercise 3
 
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why
+
+```{r}
+
+```
+
