@@ -137,7 +137,13 @@ levels(train3$SUBJ) #has one level - issue?
 
 sd(train3$CHI_MLU) #pretty close to original 
 
-#reused code 
+```
+
+rerun analysis with new data
+
+```{r}
+
+#rerun analysis
 data_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
                     (1+VISIT +(VISIT^2)|SUBJ), data = train3, REML = FALSE)
 
@@ -154,19 +160,16 @@ plot(powerCurveNew) #somewhere between 109 - 122 participants we cross the 80% m
 
 ```
 
-second attempt
-
-```{r}
-
-
-
-```
-
 ### Exercise 3
 
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why
 
 ```{r}
 
+fifteen_asd <- sample(unique(ASD_kid$SUBJ), 15)
+fifteen_asd <- as.data.frame(fifteen_asd)
+
+fifteen_td <- sample(unique(TD_kid$SUBJ), 15)
+fifteen_td <- as.data.frame(fifteen_td)
 ```
 
