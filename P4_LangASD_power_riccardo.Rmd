@@ -43,22 +43,31 @@ ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
 HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
                     (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
+HypesModel
 #interaction effect?
-inter_diag_visit <- powerSim(HypesModel, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 20)
+set.seed(911)
+inter_diag_visit <- powerSim(HypesModel, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 100)
 inter_diag_visit #40% - effect size = -0.21
 
-#second model 
-PypesModel <- lmer(CHI_MLU ~ Diagnosis + VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+#checking the diff kids 
+bad_kid <- train %>%
+  filter(Diagnosis == "ASD")
+
+good_kid <- train %>%
+  filter(Diagnosis == "TD")
+
+#cheking whether the 
+bad_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
+                   data = bad_kid, REML = FALSE)
+
+bad_model #slope .29
+
+good_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + (1+VISIT +(VISIT^2)|SUBJ),
                    data = train, REML = FALSE)
 
-fix_diag <- powerSim(PypesModel, simr::fixed("Diagnosis", method = "t"), nsim = 20)
-fix_diag
-
-fix_visit <- powerSim(PypesModel, simr::fixed("VISIT", method = "t"), nsim = 20)
-fix_visit 
+good_model #slope .55
 
 ```
-
 
 ### Exercise 2
 
@@ -73,38 +82,94 @@ How would you perform a more conservative power analysis?
 
 #for interaction model
 HypesModel
-fixef(HypesModel)["DiagnosisTD:VISIT"] <- 0.4 #least effect of interest. 
-
+fixef(HypesModel)["DiagnosisTD:VISIT"] <- 0.25 #least effect of interest. 
 library(simr)
+
+set.seed(911)
 powerCurveV = powerCurve(HypesModel,
-simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 10)
+simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 100)
 
 powerCurveV 
 plot(powerCurveV)
 
-#for fixed model 
+```
 
-PypesModel
-fixef(PypesModel)["DiagnosisTD"] <- 0.2
-fixef(PypesModel)["VISIT"] <- 0.1
-PypesModel
+attempting to simulate
 
-powerCurve1 = powerCurve(PypesModel, simr::fixed("DiagnosisTD", method = "t"),along="SUBJ", nsim = 10)
+```{r}
 
-powerCurve1 
-plot(powerCurve1)
+#FIRST APPROACH
+#https://gist.github.com/tmalsburg/df66e6c2ab494fad83ee
 
-powerCurve2 = powerCurve(PypesModel, simr::fixed("VISIT", method = "t"), along = "SUBJ", nsim = 10)
+HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+                    (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
-powerCurve2
-plot(powerCurve2)
+train2 <- train
+train2$CHI_MLU <- NA
 
-#simulating more participants 
-#I think we should use makeLmer()
+p_load(stats)
+train2$CHI_MLU <- simulate(HypesModel, seed=1, newdata=train2, re.form=NA,
+                        allow.new.levels=T)$sim_1
+
+t.test(train$CHI_MLU, train2$CHI_MLU) #close enough? 
+
+summary(train$CHI_MLU)
+summary(train2$CHI_MLU) #negative values, not good..
+
+sd(train$CHI_MLU)
+sd(train2$CHI_MLU) #actually the sd is lower..? 
+
+ggplot(train2, aes(VISIT, CHI_MLU, color = Diagnosis))+
+  geom_point()+
+  geom_smooth()
+
+ggplot(train, aes(VISIT, CHI_MLU, color = Diagnosis))+
+  geom_point()+
+  geom_smooth()
+
+#just moving on to see what happens 
+trainbackup <- train
+trainbackup2 <- train2
+
+train$SUBJ <- as.numeric(train$SUBJ)
+train2$SUBJ <- as.numeric(train2$SUBJ)
+train2$SUBJ <- train2$SUBJ + 66
+
+train3 <- rbind(train, train2)
+train3$SUBJ <- factor(train3$SUBJ) #doesn't matter whether we convert..
+levels(train3$SUBJ) #has one level - issue?
+
+sd(train3$CHI_MLU) #pretty close to original 
+
+#reused code 
+data_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+                    (1+VISIT +(VISIT^2)|SUBJ) , data = train3, REML = FALSE)
+
+data_model
+fixef(data_model)["DiagnosisTD:VISIT"] <- 0.25 #least effect of interest. 
+library(simr)
+
+set.seed(911)
+powerCurveNew = powerCurve(data_model,
+simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 100) 
+
+powerCurveNew #88 percent. 
+plot(powerCurveNew)
 
 ```
 
+second attempt
+
+```{r}
+
+
+```
 
 ### Exercise 3
 
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why
+
+```{r}
+
+```
+

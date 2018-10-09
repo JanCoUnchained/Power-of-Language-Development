@@ -36,17 +36,16 @@ TypesModel <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + verbalIQ_1 + MOT_MLU + tokens_
                     (1+VISIT + I(VISIT^2)|SUBJ), data = train, REML = FALSE)
 
 #running power analysis on diff. effects 
-powerV = powerSim(TypesModel, fixed("VISIT", method = T) nsim=200) #keep getting error. 
+powerV = powerSim(TypesModel, simr::fixed("VISIT", method = "t"), nsim=20) #keep getting error. 
 powerV #98-100, effect size = 0.47 
 
-power2 = powerSim(TypesModel, fixed("verbalIQ_1", method = T), nsim=200) #t-test. 
+power2 = powerSim(TypesModel, simr::fixed("verbalIQ_1", method = "t"), nsim=20) #t-test. 
 power2 #98-100, effect size = 0.061
 
-power3 = powerSim(TypesModel, fixed("MOT_MLU", method = T), nsim=200)
+power3 = powerSim(TypesModel, simr::fixed("MOT_MLU", method = "t"), nsim=20)
 power3 #98-100, effect size = 0.35
-save(power3, file="power3.RData")
 
-power4 = powerSim(TypesModel, fixed("tokens_MOT", method = T), nsim=200)
+power4 = powerSim(TypesModel, simr::fixed("tokens_MOT", method = "t"), nsim=20)
 power4 #82.5 (76.51 - 87.50), effect size = -0.0002
 
 
@@ -61,12 +60,13 @@ train$Diagnosis <- as.factor(train$Diagnosis)
 train$SUBJ <- as.factor(train$SUBJ)
 
 HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + I(VISIT^2) +
-                    (1+VISIT|SUBJ) , data = train, REML = FALSE)
+                    (1+VISIT + (VISIT^2)|SUBJ), data = train, REML = FALSE)
 HypesModel
 
 #doing only 20 just for ease 
+set.seed(911)
 powerHype <- powerSim(HypesModel, simr::fixed("DiagnosisTD", method = "t"), nsim = 20)
-powerHype #15% - effect size = -0.21
+powerHype #20% -0.21
 
 powerVisit <- powerSim(HypesModel, simr::fixed("VISIT", method = "t"), nsim = 20)
 powerVisit #100% - effect size = 0.41
