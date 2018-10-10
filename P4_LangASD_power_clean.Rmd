@@ -138,7 +138,7 @@ plot(powerCurveNew) #somewhere between 109 - 122 participants we cross the 80% m
 
 #do a linear regression to find the number of approximate participants when the power is 80%
 beta =  (122-109) / (88-77)
-intercept = 122 - alpha * 88
+intercept = 122 - beta * 88
 intercept + beta * 80 
 ```
 
