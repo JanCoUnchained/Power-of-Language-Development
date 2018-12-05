@@ -30,14 +30,14 @@ How much power does your study have (if your model estimates are quite right)?
 
 ```{r}
 #create model
-HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
-                    (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
+model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) + verbalIQ_1 +
+                    (1+VISIT +(VISIT^2)|SUBJ), data = train, REML = FALSE)
 
 #set seed as ensure replicability 
 set.seed(911)
 
 #calculate the power by running through 100 simulations
-inter_diag_visit <- powerSim(HypesModel, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 100)
+inter_diag_visit <- powerSim(model, simr::fixed("DiagnosisTD:VISIT", method = "t"), nsim = 100)
 
 #display the parameters of the power analysis
 inter_diag_visit #100% CI (96.38-100) - beta = 0.48
@@ -53,13 +53,13 @@ How would you perform a more conservative power analysis?
 - Report the power analysis and comment on what you can (or cannot) use its estimates for.
 ```{r}
 #set a fixed estimate for the interaction effect
-fixef(HypesModel)["DiagnosisTD:VISIT"] <- 0.25 #the smallest effect of interest
+fixef(model)["DiagnosisTD:VISIT"] <- 0.25 #the smallest effect of interest
 
 #set seed 
 set.seed(911)
 
 #do a power simulation
-powerCurveV = powerCurve(HypesModel,
+powerCurveV = powerCurve(model,
 simr::fixed("DiagnosisTD:VISIT", method = "t"), along="SUBJ",nsim = 100)
 
 #display the result of the power analysis
@@ -75,11 +75,11 @@ plot(powerCurveV)
 set.seed(911)
 
 #reload the model
-HypesModel <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) + verbalIQ_1 +
                     (1+VISIT +(VISIT^2)|SUBJ) , data = train, REML = FALSE)
 
 #display the model
-HypesModel
+model
 
 #replicate the training set and delete the values for the MLU of the children
 train2 <- train
@@ -91,7 +91,7 @@ train2$SUBJ <- train2$SUBJ + 66
 train2$SUBJ <- factor(train2$SUBJ)
 
 #simulate new values of child MLU 
-train2$CHI_MLU <- simulate(HypesModel, seed=1, newdata=train2, re.form=NA,
+train2$CHI_MLU <- simulate(model, seed=1, newdata=train2, re.form=NA,
                         allow.new.levels=T)$sim_1
 
 #conduct a t-test between the child MLU in the training set and the simulated set respectively
@@ -120,7 +120,7 @@ train3 <- rbind(train, train2)
 sd(train3$CHI_MLU) #pretty close to original 
 
 #recreate the model for the combined set
-data_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+data_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) + verbalIQ_1 +
                     (1+VISIT +(VISIT^2)|SUBJ), data = train3, REML = FALSE)
 
 #set the same fixed estimate for the interaction effect as before
@@ -178,7 +178,7 @@ train_subset <- train %>%
   subset(SUBJ %in% fifteen_each)
 
 #rerun the analysis
-subset_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) +
+subset_model <- lmer(CHI_MLU ~ Diagnosis * VISIT + Diagnosis * I(VISIT^2) + verbalIQ_1 +
                     (1+VISIT +(VISIT^2)|SUBJ), data = train_subset, REML = FALSE)
 
 #display the model
